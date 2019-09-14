@@ -2,7 +2,9 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const Jokes = require('../users/users-model.js');
+const Users = require('../jokes/jokes-model');
+const secrets = require('../config/secrets');
+const usersModel = require('../jokes/jokes-model');
 
 router.post('/register', (req, res) => {
   // implement registration
@@ -12,11 +14,7 @@ router.post('/register', (req, res) => {
 
   Users.add(user)
   .then(saved => {
-    const token = generateToken(saved);
-    res.status(201).json({ 
-      user: saved,
-      token
-    });
+    res.status(201).json(saved);
   })
   .catch(error => {
     res.status(500).json(error);
@@ -33,8 +31,7 @@ router.post('/login', (req, res) => {
       if (user && bcrypt.compareSync(password, user.password)) {
         const token = generateToken(user);
         res.status(200).json({
-          message: `Welcome ${user.username}!`,
-          token
+          message: `Welcome ${user.username}!`
         });
       } else {
         res.status(401).json({ message: 'Please try again' });
@@ -44,5 +41,18 @@ router.post('/login', (req, res) => {
       res.status(500).json(error);
     });
 });
+
+function generateToken(user) {
+  const payload = {
+    sub: user.id, 
+    username: user.username
+  };
+
+  const secret = secrets.jwtSecret;
+  const options = {
+    expiresIn: '1d'
+  };
+  return jwt.sign(payload, secrets.jwtSecret, options);
+}
 
 module.exports = router;
